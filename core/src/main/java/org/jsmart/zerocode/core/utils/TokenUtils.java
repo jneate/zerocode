@@ -15,6 +15,8 @@ import static org.apache.commons.lang.StringEscapeUtils.escapeJava;
 import static org.jsmart.zerocode.core.engine.preprocessor.ZeroCodeTokens.*;
 
 public class TokenUtils {
+	
+	private static HashMap<Integer, ArrayList<String>> generatedNumbers = new HashMap<>();
 
     public static String resolveKnownTokens(String requestJsonOrAnyString) {
         Map<String, Object> paramMap = new HashMap<>();
@@ -34,8 +36,13 @@ public class TokenUtils {
         getKnownTokens().forEach(inStoreToken -> {
                     if (runTimeToken.startsWith(inStoreToken)) {
                         if (runTimeToken.startsWith(RANDOM_NUMBER)) {
-                            paramaMap.put(runTimeToken, System.currentTimeMillis() + "");
-
+                        	// Option to include length for RANDOM_NUMBER generation
+                        	if (runTimeToken.contains(":")) {
+                        		int length = Integer.parseInt(runTimeToken.substring(RANDOM_NUMBER.length() + 1));
+                        		paramaMap.put(runTimeToken, createRandomNumber(length));
+                        	} else {
+                        		paramaMap.put(runTimeToken, System.currentTimeMillis() + "");
+                        	}
                         } else if (runTimeToken.startsWith(RANDOM_STRING_PREFIX)) {
                             int length = Integer.parseInt(runTimeToken.substring(RANDOM_STRING_PREFIX.length()));
                             paramaMap.put(runTimeToken, createRandomAlphaString(length));
@@ -111,7 +118,46 @@ public class TokenUtils {
 
         return builder.toString();
     }
-
+    
+    public static String createRandomNumber(int length) {
+    	
+    	//Generate the maximum Long value based on the length
+    	long maxSize = (long) Math.pow(10, length) - 1;
+    	
+    	//Check to see if the HashMap is empty or this particular length hasn't been called in this test suite
+    	if (generatedNumbers.isEmpty() || generatedNumbers.get(length) == null) {
+    		
+    		generatedNumbers.put(length, new ArrayList<String>());
+    		
+    		StringBuilder first = new StringBuilder("1");
+    		
+    		// Generate the smallest number based on the input length
+    		for (int i = 1; i < length; i++) {
+    			first.append("0");
+    		}
+    		
+    		// Add the smallest number as the first item in the Array for that length
+    		generatedNumbers.get(length).add(first.toString());
+    		
+    	} else {
+    		
+    		// Retrieve the previous value
+    		long previousValue = Long.parseLong(generatedNumbers.get(length).get(generatedNumbers.get(length).size() - 1));
+    		
+    		// Check if the Previous Value + 1 exceeds the maximum size
+    		if (previousValue + 1 > maxSize) {
+    			// Do something on ERROR
+    		} else {
+    			// Add the new value to the Array
+    			generatedNumbers.get(length).add(Long.toString(previousValue + 1));
+    		}
+    		
+    	}
+    	
+    	// Return the most recent generated value
+    	return generatedNumbers.get(length).get(generatedNumbers.get(length).size() - 1);
+    	
+    }
 
     public static String getXmlContent(String xmlFileResource) {
         try {
